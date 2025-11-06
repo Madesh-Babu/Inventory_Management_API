@@ -1,11 +1,15 @@
 from flask import Blueprint,request,jsonify
 from app.models import db, Product,Category
 from flask_jwt_extended import jwt_required
+from app.products.service import ProductService,DiscountedProductService
+from app.utils.roles_required import role_required
+
 
 products_b_p = Blueprint("products", __name__)
 
 @products_b_p.route("/", methods=["POST"])
 @jwt_required()
+@role_required("admin","manager")
 def add_product():
     data = request.get_json()
 
@@ -48,6 +52,7 @@ def get_product(product_id):
 
 @products_b_p.route("/<int:product_id>", methods=["PUT"])
 @jwt_required()
+@role_required("admin","manager")
 def update_product(product_id):
     product = Product.query.get_or_404(product_id)
     data = request.get_json()
@@ -67,6 +72,7 @@ def update_product(product_id):
 
 @products_b_p.route("/<int:product_id>", methods=["DELETE"])
 @jwt_required()
+@role_required("admin")
 def delete_product(product_id):
     product = Product.query.get_or_404(product_id)
 
@@ -76,3 +82,18 @@ def delete_product(product_id):
     db.session.delete(product)
     db.session.commit()
     return jsonify({"message": "Product deleted"}),200
+
+
+@products_b_p.route("/<int:product_id>/discount", methods=["PATCH"])
+def discount_product(product_id):
+    product = DiscountedProductService.get_product(product_id)
+    if not product:
+        return jsonify({"error": "Product not found"}), 404
+    
+    data = request.get_json()
+    discount = data.get("discount", 0)
+    updated = DiscountedProductService.apply_discount(product, discount)
+    return jsonify({
+        "message": f"Applied {discount}% discount",
+        "new_price": updated.price
+    })

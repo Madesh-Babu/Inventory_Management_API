@@ -1,7 +1,6 @@
 from flask import Blueprint, request, jsonify
 from app.models import db,User
-from flask_jwt_extended import create_access_token
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import create_access_token,jwt_required
 auth_b_p = Blueprint('auth',__name__)
 
 
@@ -12,6 +11,10 @@ def register():
     if not data or not data.get('username') or not data.get('password') or not data.get('email'):
         return jsonify({"error":"Missing required fields"}), 400
     
+    role =data.get("role","staff")
+    if role not in ["staff","manager","admin"]:
+        return jsonify({"error":"Invalid role"}),400
+
     if User.query.filter_by(username = data['username']).first():
         return jsonify({"error":"Username already existis"}),400
     
@@ -20,7 +23,8 @@ def register():
 
     new_user = User(
         username=data['username'],
-        email=data['email']
+        email=data["email"],
+        role=role
     )
     new_user.set_password(data['password'])
 
