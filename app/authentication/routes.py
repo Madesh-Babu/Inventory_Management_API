@@ -67,11 +67,16 @@ def get_user(user_id):
     return jsonify({"id":user.id,"username":user.username,"email":user.email}),200
 
 
-@auth_b_p.route("/<int:user_id>",methods=["PUT"])
+@auth_b_p.route("/update", methods=["PUT"])
 @jwt_required()
-def update_user(user_id):
-    user =User.query.get_or_404(user_id)
+def update_user():
     data = request.get_json()
+    user_id = data.get("id")
+
+    if not user_id:
+        return jsonify({"error": "User ID is required"}), 400
+
+    user = User.query.get_or_404(user_id)
 
     if "username" in data:
         user.username = data["username"]
@@ -79,15 +84,31 @@ def update_user(user_id):
         user.email = data["email"]
     if "password" in data:
         user.set_password(data["password"])
+    if "role" in data:
+        user.role = data["role"]
 
     db.session.commit()
-    return jsonify({"message":"User updated", "user":{"id":user.id,"username":user.username,"email":user.email}}),200
+    return jsonify({
+        "message": "User updated",
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "role": user.role
+        }
+    }), 200
 
 
-@auth_b_p.route("/<int:user_id>",methods=["DELETE"])
+@auth_b_p.route("/delete", methods=["DELETE"])
 @jwt_required()
-def delete_user(user_id):
+def delete_user():
+    data = request.get_json()
+    user_id = data.get("id")
+
+    if not user_id:
+        return jsonify({"error": "User ID is required"}), 400
+
     user = User.query.get_or_404(user_id)
     db.session.delete(user)
     db.session.commit()
-    return jsonify({"message": "User deleted"}), 200
+    return jsonify({"message": f"User {user.username} deleted successfully"}), 200
